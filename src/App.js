@@ -16,7 +16,10 @@ function App() {
           stackInformation.push({
             imageSource: image,
             annotationLayersList:[],
-            annotationLabelMap:[]
+            annotationLabelMap:[],
+            height:500,
+            width:500,
+            annLayerBoundary:5
           })
         
       imageCount++;
