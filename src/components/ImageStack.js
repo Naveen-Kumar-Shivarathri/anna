@@ -48,6 +48,7 @@ export function ImageStack({imageStack}){
         canvas.width = imageStack.width;
         canvas.height = imageStack.height;
         canvasContext.current = canvas.getContext("2d");
+        canvas.style.border = "solid 1px red"
         draw_shapes();
 
     },[]);

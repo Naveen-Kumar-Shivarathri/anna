@@ -26,8 +26,6 @@ export default function WhiteBoard({stackInformation}){
   console.log(layerProps);
   return (<>
   <ImageStack imageStack={stackInformation[currentStack]} />
-  {layerProps.map((layer,id)=>
-    <AnnotationLayer key={id} dim={annLayers[layer]}/>)}
   <Metrics />
   </>);
 
