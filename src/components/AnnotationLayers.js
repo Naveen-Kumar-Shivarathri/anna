@@ -14,3 +14,8 @@ export const selectedLayersIndices = atom({
     key:'selectedLayersIndices',
     default:[-1]
 });
+
+export const labels = atom({
+key:'labels',
+default:['label1','label2','label3']
+});

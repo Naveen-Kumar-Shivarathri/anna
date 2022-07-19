@@ -115,7 +115,7 @@ export function ImageStack({imageStack}){
                 pinnedShapeHandles.current.x = shape.x;
                 pinnedShapeHandles.current.y = shape.y;
                 selectedLayers.current.push({...shape,color:selectedShapeColor});
-                setSelectedAnnLayersIndices(()=>shapeIndex);
+                setSelectedAnnLayersIndices(()=>[shapeIndex]);
                 selectedIndex = shapeIndex;
                 break;
             }
@@ -127,7 +127,7 @@ export function ImageStack({imageStack}){
         else{
             hightLightedLayers.current = [];
             isShapeSelected.current = false;
-            setSelectedAnnLayersIndices(()=>-1);
+            setSelectedAnnLayersIndices(()=>[-1]);
         }
 
         isDragging.current = true; 
@@ -317,7 +317,8 @@ export function ImageStack({imageStack}){
     const finish_dragging = ()=>{
         if(JSON.stringify(newShape.current)!='{}'){
             currentShapes.current.push({...newShape.current});
-            setAnnLayer((prevList)=>[...prevList,{...newShape.current}])
+            setAnnLayer((prevList)=>[...prevList,{...newShape.current}]);
+            setAnnLayersMap((prevMap)=>[...prevMap,{layer:'layer'+currentShapes.current.length,label:''}]);
             newShape.current = {};
         }
     }

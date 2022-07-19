@@ -11,8 +11,6 @@ function App() {
   let images = document.getElementsByClassName("images");
   let imageCount=0;
   for(let image of images){
-      console.log(imageCount);
-      
           stackInformation.push({
             imageSource: image,
             annotationLayersList:[],
