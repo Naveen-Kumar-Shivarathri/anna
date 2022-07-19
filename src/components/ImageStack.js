@@ -41,6 +41,13 @@ export function ImageStack({imageStack}){
 
     const imageDimensions = useRef({height:0,width:0});
 
+    const boundarySelection = useRef({
+        left:false,
+        right:false,
+        top:false,
+        bottom:false
+    });
+
 
 
     useEffect(()=>{
@@ -48,7 +55,7 @@ export function ImageStack({imageStack}){
         canvas.width = imageStack.width;
         canvas.height = imageStack.height;
         canvasContext.current = canvas.getContext("2d");
-        canvas.style.border = "solid 1px red"
+        canvas.style.border = "solid 1px red";
         draw_shapes();
 
     },[]);
@@ -66,9 +73,6 @@ export function ImageStack({imageStack}){
         }
     }
 
-    const empty_array = (arrayElement)=>{
-        return arrayElement.splice(0,arrayElement.length);
-    }
 
     const is_mouse_in_shape = (x, y, shape) =>{
         let shape_left = shape.x-imageStack.annLayerBoundary;
@@ -83,6 +87,42 @@ export function ImageStack({imageStack}){
         return false;
     
     }
+
+    const is_mouse_on_resizable_boundary = (x,y,shape)=>{
+
+        let left_buffer_regionA = shape.x + imageStack.annLayerBoundary;
+        let left_buffer_regionB = shape.x - imageStack.annLayerBoundary;
+        let right_buffer_regionA = shape.x + shape.width - imageStack.annLayerBoundary;
+        let right_buffer_regionB = shape.x + shape.width + imageStack.annLayerBoundary;
+        let top_buffer_regionA = shape.y + imageStack.annLayerBoundary;
+        let top_buffer_regionB = shape.y - imageStack.annLayerBoundary;
+        let bottom_buffer_regionA = shape.y + shape.height - imageStack.annLayerBoundary;
+        let bottom_buffer_regionB = shape.y + shape.height + imageStack.annLayerBoundary;
+
+        let left_boundary_check = (x > left_buffer_regionB && x < left_buffer_regionA)&&(y > getPercentageOf(top_buffer_regionA,shape.height,12.5) && y < getPercentageOf(bottom_buffer_regionA,shape.height,-12.5));
+        let right_boundary_check = (x > right_buffer_regionA && x < right_buffer_regionB)&&(y > getPercentageOf(top_buffer_regionA,shape.height,12.5) && y < getPercentageOf(bottom_buffer_regionA,shape.height,-12.5));
+        let top_boundary_check = (y > top_buffer_regionB && y < top_buffer_regionA)&&(x > getPercentageOf(left_buffer_regionA,shape.width,12.5) && x < getPercentageOf(right_buffer_regionA,shape.width,-12.5));
+        let bottom_boundary_check = ( y > bottom_buffer_regionA && y < bottom_buffer_regionB)&&(x > getPercentageOf(left_buffer_regionA,shape.width,12.5) && x < getPercentageOf(right_buffer_regionA,shape.width,-12.5));
+
+        return {
+            left:left_boundary_check,
+            right:right_boundary_check,
+            top:top_boundary_check,
+            bottom:bottom_boundary_check
+        };
+
+       
+    }
+
+    const getPercentageOf = (coordinate,dimension,percentage)=>{
+        if(percentage<1){
+            return coordinate+dimension*percentage/100;
+        }else{
+            return coordinate+dimension*percentage/100;
+        }
+    }
+
+
 
     const is_mouse_on_shape = (x, y, shape) =>{
 
@@ -117,6 +157,7 @@ export function ImageStack({imageStack}){
                 selectedLayers.current.push({...shape,color:selectedShapeColor});
                 setSelectedAnnLayersIndices(()=>[shapeIndex]);
                 selectedIndex = shapeIndex;
+                boundarySelection.current = is_mouse_on_resizable_boundary(event.clientX,event.clientY,shape);
                 break;
             }
             shapeIndex++;
@@ -145,6 +186,13 @@ export function ImageStack({imageStack}){
         else
             isResizable.current = false;
 
+        boundarySelection.current={
+            left:false,
+            right:false,
+            top:false,
+            bottom:false
+        };
+
         if(isDragging.current){
             if(isShapeSelected.current){
                 const indices = selectedShapeIndices.current;
@@ -167,41 +215,60 @@ export function ImageStack({imageStack}){
 
     }
 
+    const is_on_resizing_boundary = ()=>{
+        for(let boundary in boundarySelection.current){
+            if(boundarySelection.current[boundary]==true)
+                return true;
+        }
+        return false;
+    }
+
     const mouse_move = (event)=>{
         event.preventDefault();
         const x = event.clientX;
         const y = event.clientY;
-  
         const shapeIndex = index_of_shape_for_coordinates(x,y);
         const selShapeIndex = selectedShapeIndices.current[0];
         if(!isDragging.current){
-            console.log('hovering');
-            
+           
             if(shapeIndex!=-1){
-                const onLeft = is_mouse_on_left_boundary(x,y,currentShapes.current[shapeIndex])&&isResizable.current&&shapeIndex==selShapeIndex;
-                const onRight= is_mouse_on_right_boundary(x,y,currentShapes.current[shapeIndex])&&isResizable.current&&shapeIndex==selShapeIndex;
-                const onBottom = is_mouse_on_bottom_boundary(x,y,currentShapes.current[shapeIndex])&&isResizable.current&&shapeIndex==selShapeIndex;
+                
+                let checkedBoundaries = is_mouse_on_resizable_boundary(x,y,currentShapes.current[shapeIndex]);
+                const onLeft = checkedBoundaries.left&&isResizable.current&&shapeIndex==selShapeIndex;
+                const onRight= checkedBoundaries.right&&isResizable.current&&shapeIndex==selShapeIndex;
+                const onTop = checkedBoundaries.top&&isResizable.current&&shapeIndex==selShapeIndex;
+                const onBottom = checkedBoundaries.bottom&&isResizable.current&&shapeIndex==selShapeIndex;
+        
                 if(onLeft||onRight){
+                    
                     canvasRef.current.style.cursor = 'col-resize';
-                }
-                if(onBottom){
+                }else
+                if(onBottom||onTop){
                     canvasRef.current.style.cursor = 'ns-resize';
+                }else if(isResizable.current&&shapeIndex==selShapeIndex){
+               
+                    canvasRef.current.style.cursor = 'move';
+                }
+                else{
+                    canvasRef.current.style.cursor = 'auto';
                 }
                 hightLightedLayers.current = [];
                 hightLightedLayers.current.push({...currentShapes.current[shapeIndex],color:highlightColor});
             }else{
                 hightLightedLayers.current = [];
-                canvasRef.current.style.cursor = 'auto';
+                canvasRef.current.style.cursor = 'crosshair';
             }
 
         }
+
         
-        if(isDragging.current&&isResizable.current){
+        if(isDragging.current&&isResizable.current&&is_on_resizing_boundary()){
     
             //Resizing
-            if(shapeIndex==selShapeIndex){
+       
             console.log('resizing');
-            if(is_mouse_on_left_boundary(x,y,currentShapes.current[selShapeIndex])){
+
+            if(boundarySelection.current.left){
                 canvasRef.current.style.cursor = 'col-resize';
                 const shape = currentShapes.current[selShapeIndex];
                 const dx = x-shape.x;
@@ -211,7 +278,7 @@ export function ImageStack({imageStack}){
                 hightLightedLayers.current = [];
                 
             }else
-            if(is_mouse_on_right_boundary(x,y,currentShapes.current[selShapeIndex])){
+            if(boundarySelection.current.right){
                 canvasRef.current.style.cursor = 'col-resize';
                 const shape = currentShapes.current[selShapeIndex];
                 const dx = x-(shape.x+shape.width);
@@ -220,7 +287,7 @@ export function ImageStack({imageStack}){
                 selectedLayers.current.push({...shape,color:selectedShapeColor});
                 hightLightedLayers.current = [];
             }else
-            if(is_mouse_on_bottom_boundary(x,y,currentShapes.current[selShapeIndex])){
+            if(boundarySelection.current.bottom){
                 canvasRef.current.style.cursor = 'ns-resize';
                 const shape = currentShapes.current[selShapeIndex];
                 const dy = y-(shape.y+shape.height);
@@ -228,13 +295,21 @@ export function ImageStack({imageStack}){
                 selectedLayers.current = [];
                 selectedLayers.current.push({...shape,color:selectedShapeColor});
                 hightLightedLayers.current = [];
+            }else if(boundarySelection.current.top){
+                canvasRef.current.style.cursor = 'ns-resize';
+                const shape = currentShapes.current[selShapeIndex];
+                const dy = y-(shape.y);
+                currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape,y:y,height:shape.height-dy},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+                selectedLayers.current = [];
+                selectedLayers.current.push({...shape,color:selectedShapeColor});
+                hightLightedLayers.current = [];
             }
-        }
+        
         }else 
         if(isDragging.current&&isShapeSelected.current){
             //moving
             console.log('moving');
-            const shape = currentShapes.current[selShapeIndex];
+            const shape = JSON.parse(JSON.stringify(currentShapes.current[selShapeIndex]));
             const dx = x-pinnedCoordiantes.current.x;
             const dy = y-pinnedCoordiantes.current.y;
             
@@ -256,6 +331,7 @@ export function ImageStack({imageStack}){
             newShape.current = {x:pinnedCoordiantes.current.x,y:pinnedCoordiantes.current.y,width:dx,height:dy,color:'orange'};
         }
 
+        setAnnLayer((prev)=>[...currentShapes.current]);
         draw_shapes();
 
     }
@@ -286,33 +362,6 @@ export function ImageStack({imageStack}){
     return selectedIndex;
 
 }
-
-    const is_mouse_on_left_boundary = (x,y,shape)=>{
-        let left_buffer_region = shape.x + imageStack.annLayerBoundary;
-      
-        if ((is_mouse_in_shape(x, y, shape)) && (x > shape.x-imageStack.annLayerBoundary && x < left_buffer_region) )
-            return true;
-    
-        return false;
-    }
-
-    const is_mouse_on_right_boundary = (x,y,shape)=>{
-
-        let right_buffer_region = shape.x + shape.width - imageStack.annLayerBoundary;
-        if ((is_mouse_in_shape(x, y, shape)) && (x > right_buffer_region && x < shape.x+shape.width+imageStack.annLayerBoundary) )
-            return true;
-    
-        return false;
-    }
-
-    const is_mouse_on_bottom_boundary = (x,y,shape)=>{
-
-        let bottom_buffer_region = shape.y + shape.height - imageStack.annLayerBoundary;
-        if ((is_mouse_in_shape(x, y, shape)) && (y > bottom_buffer_region && y < shape.y+shape.height+imageStack.annLayerBoundary) )
-            return true;
-    
-        return false;
-    }
 
     const finish_dragging = ()=>{
         if(JSON.stringify(newShape.current)!='{}'){

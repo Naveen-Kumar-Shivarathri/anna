@@ -7,6 +7,7 @@ import { ImageStack } from "./ImageStack";
 import { Metrics } from "./Metrics";
 import { AnnotationLayer } from "./AnnotationLayer";
 import { selectedLayersIndices, annotationLayersMap } from "./AnnotationLayers";
+import { LayerDetails } from "./LayerDetails";
 
 
 
@@ -16,7 +17,6 @@ export default function WhiteBoard({stackInformation}){
   const [currentStack,setCurrentStack] = useRecoilState(CurrentStack);
   const annLayers = useRecoilValue(annotationLayers);
   const selectedLayers = useRecoilValue(selectedLayersIndices);
-  const [layersMap,setLayersMap] = useRecoilState(annotationLayersMap);
   
   const layerProps = [];
   if(selectedLayers[0]!=-1&&selectedLayers[0]!=undefined){
@@ -26,6 +26,7 @@ export default function WhiteBoard({stackInformation}){
   return (<>
   <ImageStack imageStack={stackInformation[currentStack]} />
   <AnnotationLayer dim={layerProps[0]} />
+  <LayerDetails />
   <Metrics />
   </>);
 
