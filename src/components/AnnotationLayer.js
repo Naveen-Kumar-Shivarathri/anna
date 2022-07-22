@@ -1,10 +1,11 @@
 import { annotationLayersMap,labels } from "./AnnotationLayers";
-import { useRecoilState } from "recoil";
+import { useRecoilState, useRecoilValue } from "recoil";
 
 export function AnnotationLayer({dim}){
 
     const [layersMap,setLayersMap] = useRecoilState(annotationLayersMap);
-    const [labelList,setLabelList] = useRecoilState(labels);
+    const predefinedLabelList = useRecoilValue(labels);
+    const labelList = [...predefinedLabelList];
     if(dim==undefined)
     {
         return <></>;
@@ -14,7 +15,22 @@ export function AnnotationLayer({dim}){
         left: dim.x+'px',
         top: dim.y+dim.height+'px'
     }
-    
+
+    for(let layer of layersMap){
+
+        if(layer.label!=''&&layer.label!=undefined){
+            let found = false;
+            for(let label of labelList){
+                if(label==layer.label)
+                    {
+                        found = true;
+                        break;
+                    }
+            }
+            if(!found)
+                labelList.push(layer.label);
+        }
+    }
 
     if(layersMap[dim.index]==undefined){
         return <></>;

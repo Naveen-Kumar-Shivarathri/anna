@@ -11,8 +11,6 @@ export function ImageStack({imageStack}){
 
     const [selectedAnnLayersIndices, setSelectedAnnLayersIndices] = useRecoilState(selectedLayersIndices);
 
-    const currentShapes = useRef([]);
-
     const newShape = useRef({});
 
     const hightLightedLayers = useRef([]);
@@ -58,13 +56,14 @@ export function ImageStack({imageStack}){
         canvas.style.border = "solid 1px red";
         draw_shapes();
 
-    },[]);
+    },[annLayers]);
 
     const draw_shapes = () =>{
         const context = canvasContext.current;
+ 
         context.clearRect(0, 0,imageStack.width, imageStack.height);
         context.drawImage(imageStack.imageSource, 0, 0);
-        const drawableShapes = [...currentShapes.current,...hightLightedLayers.current,...selectedLayers.current];
+        const drawableShapes = [...annLayers,...hightLightedLayers.current,{...annLayers[selectedAnnLayersIndices[0]],color:'red'}];
         if(JSON.stringify(newShape.current)!='{}')
             drawableShapes.push(newShape.current);
         for (let shape of drawableShapes) {
@@ -149,7 +148,7 @@ export function ImageStack({imageStack}){
 
         let shapeIndex = 0;
         let selectedIndex = -1;
-        for(let shape of currentShapes.current){
+        for(let shape of annLayers){
             if(is_mouse_on_shape(event.clientX,event.clientY,shape)){
                 selectedShapeIndices.current.push(shapeIndex);
                 pinnedShapeHandles.current.x = shape.x;
@@ -198,8 +197,8 @@ export function ImageStack({imageStack}){
                 const indices = selectedShapeIndices.current;
                 let selectedIndex=0;
                 for(let index of indices){
-                    currentShapes.current = [...currentShapes.current.slice(0,index),{...selectedLayers.current[selectedIndex],color:currentShapes.current[index].color},...currentShapes.current.slice(index+1,currentShapes.current.length)];
-                    setAnnLayer((prevList)=>[...prevList.slice(0,index),{...selectedLayers.current[selectedIndex],color:currentShapes.current[index].color},...prevList.slice(index+1,prevList.length)]);
+                    //currentShapes.current = [...currentShapes.current.slice(0,index),{...selectedLayers.current[selectedIndex],color:currentShapes.current[index].color},...currentShapes.current.slice(index+1,currentShapes.current.length)];
+                    setAnnLayer((prevList)=>[...prevList.slice(0,index),{...selectedLayers.current[selectedIndex],color:annLayers[index].color},...prevList.slice(index+1,prevList.length)]);
                     selectedIndex++;
                 }
                 
@@ -233,7 +232,7 @@ export function ImageStack({imageStack}){
            
             if(shapeIndex!=-1){
                 
-                let checkedBoundaries = is_mouse_on_resizable_boundary(x,y,currentShapes.current[shapeIndex]);
+                let checkedBoundaries = is_mouse_on_resizable_boundary(x,y,annLayers[shapeIndex]);
                 const onLeft = checkedBoundaries.left&&isResizable.current&&shapeIndex==selShapeIndex;
                 const onRight= checkedBoundaries.right&&isResizable.current&&shapeIndex==selShapeIndex;
                 const onTop = checkedBoundaries.top&&isResizable.current&&shapeIndex==selShapeIndex;
@@ -253,7 +252,8 @@ export function ImageStack({imageStack}){
                     canvasRef.current.style.cursor = 'auto';
                 }
                 hightLightedLayers.current = [];
-                hightLightedLayers.current.push({...currentShapes.current[shapeIndex],color:highlightColor});
+
+                hightLightedLayers.current.push({...annLayers[shapeIndex],color:highlightColor});
             }else{
                 hightLightedLayers.current = [];
                 canvasRef.current.style.cursor = 'crosshair';
@@ -270,38 +270,44 @@ export function ImageStack({imageStack}){
 
             if(boundarySelection.current.left){
                 canvasRef.current.style.cursor = 'col-resize';
-                const shape = currentShapes.current[selShapeIndex];
-                const dx = x-shape.x;
-                currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape,x:shape.x+dx,width:shape.width-dx},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+                const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
+                const dx = x-annLayersCopy[selShapeIndex].x;
+                annLayersCopy[selShapeIndex].x += dx;
+                annLayersCopy[selShapeIndex].width -= dx;
+                setAnnLayer((prev)=>[...annLayersCopy]);
                 selectedLayers.current = [];
-                selectedLayers.current.push({...shape,color:selectedShapeColor});
+                selectedLayers.current.push({...annLayersCopy[selShapeIndex],color:selectedShapeColor});
                 hightLightedLayers.current = [];
                 
             }else
             if(boundarySelection.current.right){
                 canvasRef.current.style.cursor = 'col-resize';
-                const shape = currentShapes.current[selShapeIndex];
-                const dx = x-(shape.x+shape.width);
-                currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape,width:shape.width+dx},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+                const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
+                const dx = x-(annLayersCopy[selShapeIndex].x+annLayersCopy[selShapeIndex].width);
+                annLayersCopy[selShapeIndex].width += dx;
+                setAnnLayer((prev)=>[...annLayersCopy]);
                 selectedLayers.current = [];
-                selectedLayers.current.push({...shape,color:selectedShapeColor});
+                selectedLayers.current.push({...annLayersCopy[selShapeIndex],color:selectedShapeColor});
                 hightLightedLayers.current = [];
             }else
             if(boundarySelection.current.bottom){
                 canvasRef.current.style.cursor = 'ns-resize';
-                const shape = currentShapes.current[selShapeIndex];
-                const dy = y-(shape.y+shape.height);
-                currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape,height:shape.height+dy},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+                const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
+                const dy = y-(annLayersCopy[selShapeIndex].y+annLayersCopy[selShapeIndex].height);
+                annLayersCopy[selShapeIndex].height += dy;
+                setAnnLayer((prev)=>[...annLayersCopy]);
                 selectedLayers.current = [];
-                selectedLayers.current.push({...shape,color:selectedShapeColor});
+                selectedLayers.current.push({...annLayersCopy[selShapeIndex],color:selectedShapeColor});
                 hightLightedLayers.current = [];
             }else if(boundarySelection.current.top){
                 canvasRef.current.style.cursor = 'ns-resize';
-                const shape = currentShapes.current[selShapeIndex];
-                const dy = y-(shape.y);
-                currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape,y:y,height:shape.height-dy},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+                const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
+                const dy = y-(annLayersCopy[selShapeIndex].y);
+                annLayersCopy[selShapeIndex].y = y;
+                annLayersCopy[selShapeIndex].height -= dy;
+                setAnnLayer((prev)=>[...annLayersCopy]);
                 selectedLayers.current = [];
-                selectedLayers.current.push({...shape,color:selectedShapeColor});
+                selectedLayers.current.push({...annLayersCopy[selShapeIndex],color:selectedShapeColor});
                 hightLightedLayers.current = [];
             }
         
@@ -309,16 +315,15 @@ export function ImageStack({imageStack}){
         if(isDragging.current&&isShapeSelected.current){
             //moving
             console.log('moving');
-            const shape = JSON.parse(JSON.stringify(currentShapes.current[selShapeIndex]));
+            const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
             const dx = x-pinnedCoordiantes.current.x;
             const dy = y-pinnedCoordiantes.current.y;
-            
-            shape.x = pinnedShapeHandles.current.x+dx;
-            shape.y = pinnedShapeHandles.current.y+dy;
-  
-            currentShapes.current = [...currentShapes.current.splice(0,selShapeIndex),{...shape},...currentShapes.current.splice(selShapeIndex+1,currentShapes.current.length)];
+            annLayersCopy[selShapeIndex].x = pinnedShapeHandles.current.x+dx;
+            annLayersCopy[selShapeIndex].y = pinnedShapeHandles.current.y+dy;
+            console.log(annLayersCopy);
+            setAnnLayer((prev)=>[...annLayersCopy]);
             selectedLayers.current = [];
-            selectedLayers.current.push({...shape,color:selectedShapeColor});
+            selectedLayers.current.push({...annLayersCopy[selShapeIndex],color:selectedShapeColor});
             hightLightedLayers.current = []; 
 
         }else 
@@ -327,11 +332,10 @@ export function ImageStack({imageStack}){
             console.log('new-shape-drag');
             const dx = x - pinnedCoordiantes.current.x;
             const dy = y - pinnedCoordiantes.current.y;
-
             newShape.current = {x:pinnedCoordiantes.current.x,y:pinnedCoordiantes.current.y,width:dx,height:dy,color:'orange'};
         }
 
-        setAnnLayer((prev)=>[...currentShapes.current]);
+
         draw_shapes();
 
     }
@@ -351,7 +355,7 @@ export function ImageStack({imageStack}){
         let shapeIndex = 0;
         let selectedIndex = -1;
 
-        for(let shape of currentShapes.current){
+        for(let shape of annLayers){
             if(is_mouse_on_shape(x,y,shape)){
                 selectedIndex = shapeIndex;
                 break;
@@ -365,9 +369,12 @@ export function ImageStack({imageStack}){
 
     const finish_dragging = ()=>{
         if(JSON.stringify(newShape.current)!='{}'){
-            currentShapes.current.push({...newShape.current});
-            setAnnLayer((prevList)=>[...prevList,{...newShape.current}]);
-            setAnnLayersMap((prevMap)=>[...prevMap,{layer:'layer'+currentShapes.current.length,label:''}]);
+            //currentShapes.current.push({...newShape.current});
+            const annLayersCopy = JSON.parse(JSON.stringify(annLayers));
+            annLayersCopy.push({...newShape.current});
+            setAnnLayer((prevList)=>[...annLayersCopy]);
+            const length = JSON.parse(JSON.stringify(annLayers)).length;
+            setAnnLayersMap((prevMap)=>[...prevMap,{layer:'layer'+length,label:''}]);
             newShape.current = {};
         }
     }

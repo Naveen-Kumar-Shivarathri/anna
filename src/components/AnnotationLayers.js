@@ -19,3 +19,8 @@ export const labels = atom({
 key:'labels',
 default:['label1','label2','label3']
 });
+
+export const userDefinedLabels = atom({
+    key:'userDefinedLabels',
+    default:[]
+});
